@@ -151,28 +151,39 @@ fn render_disjunction(children: &Vec<Token>) -> Block {
 }
 
 fn render_quantifier(tok: &Token, min: usize, max: Option<usize>) -> Block {
+    let label = match max {
+        Some(1) if min == 0 => "".to_owned(),
+        Some(max) if max == min => format!("={min}"),
+        Some(max) if min == 0 => format!("..={max}"),
+        Some(max) => format!("{min}..={max}"),
+        None if min == 0 => format!(".."),
+        None => format!("{min}.."),
+    };
+
     let block = render_token(tok);
+    let min_width = label.chars().count().max(2);
     let zero = min == 0;
     let more_than_one = max.unwrap_or(2) > 1;
-    let width = block.width.max(2);
-    let mut new_block = Block::new(width + 2, block.height + 2);
+    let width = block.width.max(min_width);
+    let mut new_block = Block::new(width + 2, block.height + 4);
 
     if zero {
-        for i in 1..new_block.height / 2 {
+        for i in 2..new_block.height / 2 {
             new_block.set(i, 0, &format!("│{}│", " ".repeat(width)));
         }
 
-        new_block.set(0, 0, &format!("╭{}╮", "─".repeat(width)));
+        new_block.set(1, 0, &format!("╭{}╮", "─".repeat(width)));
         new_block.set(new_block.height / 2, 0, &format!("┴{}┴", "─".repeat(width)));
     } else {
         new_block.set(new_block.height / 2, 0, &format!("─{}─", "─".repeat(width)));
     }
 
     if more_than_one {
-        new_block.set(block.height + 1, 1, &format!("╰{}╯", "─".repeat(width - 2)));
+        new_block.set(block.height + 2, 1, &format!("╰{}╯", "─".repeat(width - 2)));
+        new_block.set(block.height + 3, 1, &label);
     }
 
-    new_block.set(1, 1, &block);
+    new_block.set(2, 1, &block);
     new_block
 }
 
@@ -194,6 +205,7 @@ pub fn render_token(tok: &Token) -> Block {
         Token::LazyQuantifier(tok, min, max) => render_quantifier(tok, *min, *max),
         Token::GreedyQuantifier(tok, min, max) => render_quantifier(tok, *min, *max),
         Token::Capturing(tok, _) => render_token(tok),
+        Token::AsciiRange(start, end) => Block::from(format!("{start}-{end}").as_str()),
     }
 }
 
@@ -270,7 +282,13 @@ mod tests {
 
         assert_eq!(
             &b.s,
-            &vec!["╭hello╮", "┼a────┼", "╰\\w───╯", "",].join("\n")
+            &vec![
+                "╭hello╮", //
+                "┼a────┼",
+                "╰\\s───╯",
+                "",
+            ]
+            .join("\n")
         );
     }
 
@@ -287,7 +305,16 @@ mod tests {
             Token::Conjunction(vec![Token::Literal('a')]),
         ]));
 
-        assert_eq!(&b.s, &vec!["╭hello╮", "┴a────┴", "       ", "",].join("\n"));
+        assert_eq!(
+            &b.s,
+            &vec![
+                "╭hello╮", //
+                "┴a────┴",
+                "       ",
+                "",
+            ]
+            .join("\n")
+        );
     }
 
     #[test]
@@ -304,7 +331,18 @@ mod tests {
             None,
         ));
 
-        assert_eq!(&b.s, &vec!["╭─────╮", "┴hello┴", " ╰───╯ ", "",].join("\n"));
+        assert_eq!(
+            &b.s,
+            &vec![
+                "       ",
+                "╭─────╮", //
+                "┴hello┴",
+                " ╰───╯ ",
+                " ..    ",
+                "",
+            ]
+            .join("\n")
+        );
     }
 
     #[test]
@@ -321,7 +359,18 @@ mod tests {
             Some(2),
         ));
 
-        assert_eq!(&b.s, &vec!["╭─────╮", "┴hello┴", " ╰───╯ ", "",].join("\n"));
+        assert_eq!(
+            &b.s,
+            &vec![
+                "       ",
+                "╭─────╮", //
+                "┴hello┴",
+                " ╰───╯ ",
+                " ..=2  ",
+                "",
+            ]
+            .join("\n")
+        );
     }
 
     #[test]
@@ -338,7 +387,18 @@ mod tests {
             None,
         ));
 
-        assert_eq!(&b.s, &vec!["       ", "─hello─", " ╰───╯ ", "",].join("\n"));
+        assert_eq!(
+            &b.s,
+            &vec![
+                "       ", //
+                "       ",
+                "─hello─",
+                " ╰───╯ ",
+                " 1..   ",
+                "",
+            ]
+            .join("\n")
+        );
     }
 
     #[test]
@@ -355,6 +415,17 @@ mod tests {
             Some(1),
         ));
 
-        assert_eq!(&b.s, &vec!["╭─────╮", "┴hello┴", "       ", "",].join("\n"));
+        assert_eq!(
+            &b.s,
+            &vec![
+                "       ",
+                "╭─────╮", //
+                "┴hello┴",
+                "       ",
+                "       ",
+                "",
+            ]
+            .join("\n")
+        );
     }
 }

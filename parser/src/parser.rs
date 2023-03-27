@@ -20,6 +20,7 @@ pub enum Token {
     NotAlphanumeric,
     NotDigit,
     NotWhitespace,
+    AsciiRange(char, char),
 }
 
 pub fn parse_expr(expr: impl IntoIterator<Item = char>) -> Result<Token> {
@@ -175,17 +176,13 @@ fn parse_choice(chars: &mut impl Iterator<Item = (usize, char)>) -> Result<Token
         };
 
         match tok.clone() {
-            ChoiceToken::Literal(ch) => {
+            ChoiceToken::Literal(ch) | ChoiceToken::Token(Token::Literal(ch)) => {
                 if let Some(ChoiceToken::RangeStart(start)) = last {
-                    choices.extend((start..ch).into_iter().skip(1).map(|ch| Token::Literal(ch)));
+                    choices.remove(&Token::Literal(start));
+                    choices.insert(Token::AsciiRange(start, ch));
+                } else {
+                    choices.insert(Token::Literal(ch));
                 }
-                choices.insert(Token::Literal(ch));
-            }
-            ChoiceToken::Token(Token::Literal(ch)) => {
-                if let Some(ChoiceToken::RangeStart(start)) = last {
-                    choices.extend((start..ch).into_iter().skip(1).map(|ch| Token::Literal(ch)));
-                }
-                choices.insert(Token::Literal(ch));
             }
             ChoiceToken::Token(tok) => {
                 choices.insert(tok);
@@ -318,12 +315,7 @@ mod tests {
     fn test_choice_range() {
         let tok = parse_expr("[a-d]".chars()).expect("parsing should work");
 
-        let expected_disjunction = vec![
-            Token::Literal('a'),
-            Token::Literal('b'),
-            Token::Literal('c'),
-            Token::Literal('d'),
-        ];
+        let expected_disjunction = vec![Token::AsciiRange('a', 'd')];
 
         assert_matches!(tok, Token::Conjunction(conjunction) => {
             assert_matches!(conjunction.get(0), Some(Token::Disjunction(disjunction)) => {
@@ -336,13 +328,7 @@ mod tests {
     fn test_choice_range_tailing_dash() {
         let tok = parse_expr("[a-d-]".chars()).expect("parsing should work");
 
-        let expected_disjunction = vec![
-            Token::Literal('a'),
-            Token::Literal('b'),
-            Token::Literal('c'),
-            Token::Literal('d'),
-            Token::Literal('-'),
-        ];
+        let expected_disjunction = vec![Token::AsciiRange('a', 'd'), Token::Literal('-')];
 
         assert_matches!(tok, Token::Conjunction(conjunction) => {
             assert_matches!(conjunction.get(0), Some(Token::Disjunction(disjunction)) => {
@@ -373,14 +359,8 @@ mod tests {
         let tok = parse_expr("[a-d0-3-]".chars()).expect("parsing should work");
 
         let expected_disjunction = vec![
-            Token::Literal('a'),
-            Token::Literal('b'),
-            Token::Literal('c'),
-            Token::Literal('d'),
-            Token::Literal('0'),
-            Token::Literal('1'),
-            Token::Literal('2'),
-            Token::Literal('3'),
+            Token::AsciiRange('a', 'd'),
+            Token::AsciiRange('0', '3'),
             Token::Literal('-'),
         ];
 

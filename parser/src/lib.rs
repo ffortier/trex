@@ -32,7 +32,7 @@ mod tests {
 
     #[test]
     fn test_phone_number_display() {
-        let re: Regex = r#"^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}$"#
+        let re: Regex = r#"^(\+\d{1,2}\s)?\(?\d{3}\)?[a-z\s.-]\d{3}[\s.-]\d{4}$"#
             .parse()
             .expect("parse");
 
