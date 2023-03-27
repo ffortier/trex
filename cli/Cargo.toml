@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 trex-parser = { path = "../parser" }
 clap = { version ="4.1.11", features = ["derive"] }
+termion = "2.0.1"

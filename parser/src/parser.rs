@@ -7,7 +7,6 @@ pub enum Token {
     Capturing(Box<Token>, Option<String>),
     Conjunction(Vec<Token>),
     Disjunction(Vec<Token>),
-    Negation(Box<Token>),
     Literal(char),
     Start,
     End,
@@ -15,6 +14,12 @@ pub enum Token {
     GreedyQuantifier(Box<Token>, usize, Option<usize>),
     LazyQuantifier(Box<Token>, usize, Option<usize>),
     WordBoundary,
+    Alphanumeric,
+    Digit,
+    Whitespace,
+    NotAlphanumeric,
+    NotDigit,
+    NotWhitespace,
 }
 
 pub fn parse_expr(expr: impl IntoIterator<Item = char>) -> Result<Token> {
@@ -234,42 +239,15 @@ fn parse_range_quantifier(
     }
 }
 
-fn tokenize_ranges<T: IntoIterator<Item = char> + Clone>(arr: &[T]) -> Token {
-    let values = arr
-        .iter()
-        .flat_map(|range| range.clone().into_iter())
-        .map(|ch| Token::Literal(ch))
-        .collect();
-
-    Token::Disjunction(values)
-}
-
-fn alphanumeric() -> Token {
-    tokenize_ranges(&['a'..='z', 'A'..='Z', '0'..='9'])
-}
-
-fn digit() -> Token {
-    tokenize_ranges(&['0'..='9'])
-}
-
-fn whitespace() -> Token {
-    Token::Disjunction(vec![
-        Token::Literal(' '),
-        Token::Literal('\t'),
-        Token::Literal('\n'),
-        Token::Literal('\r'),
-    ])
-}
-
 fn parse_special(chars: &mut impl Iterator<Item = (usize, char)>) -> Result<Token> {
     match chars.next() {
         None => Err(Error::UnexpectedEndOfInput),
-        Some((_, 'w')) => Ok(alphanumeric()),
-        Some((_, 'W')) => Ok(Token::Negation(Box::new(alphanumeric()))),
-        Some((_, 's')) => Ok(whitespace()),
-        Some((_, 'S')) => Ok(Token::Negation(Box::new(whitespace()))),
-        Some((_, 'd')) => Ok(digit()),
-        Some((_, 'D')) => Ok(Token::Negation(Box::new(digit()))),
+        Some((_, 'w')) => Ok(Token::Alphanumeric),
+        Some((_, 'W')) => Ok(Token::NotAlphanumeric),
+        Some((_, 's')) => Ok(Token::Whitespace),
+        Some((_, 'S')) => Ok(Token::NotWhitespace),
+        Some((_, 'd')) => Ok(Token::Digit),
+        Some((_, 'D')) => Ok(Token::NotDigit),
         Some((_, 'n')) => Ok(Token::Literal('\n')),
         Some((_, 'r')) => Ok(Token::Literal('\r')),
         Some((_, 't')) => Ok(Token::Literal('\t')),
@@ -279,6 +257,8 @@ fn parse_special(chars: &mut impl Iterator<Item = (usize, char)>) -> Result<Toke
         Some((_, '+')) => Ok(Token::Literal('+')),
         Some((_, '[')) => Ok(Token::Literal('[')),
         Some((_, ']')) => Ok(Token::Literal(']')),
+        Some((_, '(')) => Ok(Token::Literal('(')),
+        Some((_, ')')) => Ok(Token::Literal(')')),
         Some((_, '|')) => Ok(Token::Literal('|')),
         Some((_, '{')) => Ok(Token::Literal('{')),
         Some((_, '}')) => Ok(Token::Literal('}')),
@@ -312,21 +292,7 @@ mod tests {
     fn test_special_digit() {
         let tok = parse_expr("\\d".chars()).expect("parsing should work");
 
-        assert_eq!(
-            tok,
-            Token::Conjunction(vec![Token::Disjunction(vec![
-                Token::Literal('0'),
-                Token::Literal('1'),
-                Token::Literal('2'),
-                Token::Literal('3'),
-                Token::Literal('4'),
-                Token::Literal('5'),
-                Token::Literal('6'),
-                Token::Literal('7'),
-                Token::Literal('8'),
-                Token::Literal('9'),
-            ])])
-        )
+        assert_eq!(tok, Token::Conjunction(vec![Token::Digit]))
     }
 
     #[test]
