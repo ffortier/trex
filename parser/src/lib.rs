@@ -4,14 +4,32 @@ use std::{
 };
 
 use parser::Token;
-pub use rendering::style::{Color, Format, Style};
+pub use rendering::style::{Color, Format};
 
+mod compiler;
 pub mod error;
 mod parser;
 mod rendering;
 
 pub struct Regex {
     tok: Token,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub struct Style {
+    pub background: Color,
+    pub foreground: Color,
+    pub format: Format,
+}
+
+impl From<rendering::style::Style> for Style {
+    fn from(value: rendering::style::Style) -> Self {
+        Self {
+            background: value.background.unwrap_or_default(),
+            foreground: value.foreground.unwrap_or_default(),
+            format: value.format.unwrap_or_default(),
+        }
+    }
 }
 
 struct StyledOutput<'a, F>

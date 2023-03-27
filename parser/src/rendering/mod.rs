@@ -159,8 +159,8 @@ fn render_special(s: &str) -> Block {
 
     b.with_styles(|styles| {
         styles.clear(Style {
-            foreground: Color::Blue,
-            format: Format::Bold,
+            foreground: Some(Color::Blue),
+            format: Some(Format::Bold),
             ..Default::default()
         })
     });

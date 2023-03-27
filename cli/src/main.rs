@@ -1,7 +1,6 @@
 use std::fmt::{Arguments, Display};
 
 use clap::{Parser, Subcommand};
-use termion::color;
 use trex_parser::{error::Result, Color, Format, Regex, Style};
 
 const _TOML: &'static str = include_str!("../Cargo.toml");
@@ -70,37 +69,14 @@ fn to_termion_style(format: &Format) -> Box<dyn Display> {
     }
 }
 
-fn format_fg(style: &Style, arg: &Arguments<'_>) -> String {
-    match style.foreground {
-        Color::Inherit => format_bg(style, arg),
-        color => format!(
-            "{}{}",
-            termion::color::Fg(to_termion_color(&color).as_ref()),
-            format_bg(style, arg)
-        ),
-    }
-}
-
-fn format_bg(style: &Style, arg: &Arguments<'_>) -> String {
-    match style.background {
-        Color::Inherit => format_style(style, arg),
-        color => format!(
-            "{}{}",
-            termion::color::Bg(to_termion_color(&color).as_ref()),
-            format_style(style, arg)
-        ),
-    }
-}
-
-fn format_style(style: &Style, arg: &Arguments<'_>) -> String {
-    match style.format {
-        Format::Inherit => format!("{arg}"),
-        format => format!("{}{}", to_termion_style(&format), format!("{arg}")),
-    }
-}
-
 fn termion_style(style: &Style, arg: &Arguments<'_>) -> String {
-    format_fg(style, arg)
+    format!(
+        "{}{}{}{}",
+        termion::color::Bg(to_termion_color(&style.background).as_ref()),
+        termion::color::Fg(to_termion_color(&style.foreground).as_ref()),
+        to_termion_style(&style.format),
+        arg
+    )
 }
 
 fn main() -> Result<()> {

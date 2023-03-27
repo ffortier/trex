@@ -1,7 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Color {
     #[default]
-    Inherit,
     Reset,
     Black,
     Red,
@@ -66,7 +65,6 @@ impl Color {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Format {
     #[default]
-    Inherit,
     Reset,
     Bold,
     Dim,
@@ -77,21 +75,21 @@ pub enum Format {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Style {
-    pub background: Color,
-    pub foreground: Color,
-    pub format: Format,
+    pub background: Option<Color>,
+    pub foreground: Option<Color>,
+    pub format: Option<Format>,
 }
 
 impl Style {
     pub fn apply(&mut self, s: &Style) {
-        if s.background != Color::Inherit {
-            self.background = s.background;
+        if let Some(color) = s.background {
+            self.background = Some(color);
         }
-        if s.foreground != Color::Inherit {
-            self.foreground = s.foreground;
+        if let Some(color) = s.foreground {
+            self.foreground = Some(color);
         }
-        if s.format != Format::Inherit {
-            self.format = s.format;
+        if let Some(format) = s.format {
+            self.format = Some(format);
         }
     }
 }
