@@ -1,75 +1,25 @@
-use std::{cmp::Ordering, fmt::Display};
+use block::Block;
+pub mod block;
+pub mod style;
+
+use std::cmp::Ordering;
 
 use crate::parser::Token;
 
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct Block {
-    height: usize,
-    width: usize,
-    s: String,
+use self::style::{Color, Format, Style, Styles};
+
+pub trait Styled {
+    fn as_str(&self) -> &str;
+    fn style(&self) -> Option<&Styles>;
 }
 
-impl Block {
-    pub fn new(width: usize, height: usize) -> Self {
-        Self {
-            height,
-            width,
-            s: (" ".repeat(width) + "\n").repeat(height),
-
-            ..Default::default()
-        }
+impl Styled for str {
+    fn as_str(&self) -> &str {
+        self
     }
 
-    pub fn set(&mut self, row: usize, col: usize, s: &impl AsRef<str>) {
-        let mut row = row;
-
-        for ln in s.as_ref().lines() {
-            let offset = row * (self.width + 1) + col;
-            let len = ln.chars().count();
-
-            let start = self
-                .s
-                .char_indices()
-                .nth(offset)
-                .expect("char at offset start")
-                .0;
-
-            let end = self
-                .s
-                .char_indices()
-                .nth(offset + len)
-                .expect("char at offset end")
-                .0;
-
-            self.s.replace_range(start..end, ln);
-            row += 1
-        }
-    }
-}
-
-impl Display for Block {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.s)
-    }
-}
-
-fn resize((width, height): (usize, usize), ln: &str) -> (usize, usize) {
-    (width.max(ln.chars().count()), height + 1)
-}
-
-impl From<&str> for Block {
-    fn from(value: &str) -> Self {
-        let (width, height) = value.lines().fold((0, 0), resize);
-        let mut buf = Self::new(width, height);
-
-        buf.set(0, 0, &value);
-        buf
-    }
-}
-
-impl AsRef<str> for Block {
-    fn as_ref(&self) -> &str {
-        &self.s
+    fn style(&self) -> Option<&Styles> {
+        None
     }
 }
 
@@ -77,22 +27,21 @@ fn render_conjunction(children: &Vec<Token>) -> Block {
     let child_blocks: Vec<_> = children.into_iter().map(render_token).collect();
     let (width, height) = child_blocks
         .iter()
-        .fold((0, 0), |(w, h), b| (w + b.width, h.max(b.height)));
+        .fold((0, 0), |(w, h), b| (w + b.width(), h.max(b.height())));
 
     let mut new_block = Block::new(width, height);
     let mut col = 0;
 
     for child_block in child_blocks.iter() {
-        let row = (height - child_block.height) / 2;
-        new_block.set(row, col, &child_block);
-        col += child_block.width;
+        let row = (height - child_block.height()) / 2;
+        new_block.set(row, col, child_block);
+        col += child_block.width();
     }
 
     new_block
 }
 
 fn render_disjunction_line(idx: usize, len: usize, ordering: Ordering, width: usize) -> String {
-    println!("idx={idx}, len={len}, ordering={ordering:?}");
     match ordering {
         Ordering::Equal if idx == 0 => format!("┬{}┬", "─".repeat(width)),
         Ordering::Equal if idx == len - 1 => format!("┴{}┴", "─".repeat(width)),
@@ -104,10 +53,14 @@ fn render_disjunction_line(idx: usize, len: usize, ordering: Ordering, width: us
 }
 
 fn render_disjunction(children: &Vec<Token>) -> Block {
+    if children.len() == 1 {
+        return render_token(children.iter().next().unwrap());
+    }
+
     let child_blocks: Vec<_> = children.into_iter().map(render_token).collect();
     let (width, height) = child_blocks
         .iter()
-        .fold((0, 0), |(w, h), b| (w.max(b.width), h + b.height));
+        .fold((0, 0), |(w, h), b| (w.max(b.width()), h + b.height()));
 
     let height = (height + 1) % 2 + height;
     let middle = height / 2;
@@ -117,34 +70,36 @@ fn render_disjunction(children: &Vec<Token>) -> Block {
 
     if child_blocks.len() >= 2 {
         let last = child_blocks.last().unwrap();
-        let first_middle = child_blocks.get(0).unwrap().height / 2;
-        let last_middle = last.height / 2 + child_blocks.iter().fold(0, |sum, b| sum + b.height)
-            - last.height / 2
+        let first_middle = child_blocks.get(0).unwrap().height() / 2;
+        let last_middle = last.height() / 2
+            + child_blocks.iter().fold(0, |sum, b| sum + b.height())
+            - last.height() / 2
             - 1;
 
         for r in first_middle..last_middle {
-            new_block.set(r, 0, &format!("│{}│", " ".repeat(width)));
+            new_block.set(r, 0, format!("│{}│", " ".repeat(width)).as_str());
         }
     }
 
-    new_block.set(middle, 0, &format!("┤{}├", " ".repeat(width)));
+    new_block.set(middle, 0, format!("┤{}├", " ".repeat(width)).as_str());
 
     for (i, child_block) in child_blocks.iter().enumerate() {
-        let child_middle = child_block.height / 2;
+        let child_middle = child_block.height() / 2;
 
         new_block.set(
             row + child_middle,
             0,
-            &render_disjunction_line(
+            render_disjunction_line(
                 i,
                 child_blocks.len(),
                 (row + child_middle).cmp(&middle),
                 width,
-            ),
+            )
+            .as_str(),
         );
 
-        new_block.set(row, 1, &child_block);
-        row += child_block.height;
+        new_block.set(row, 1, child_block);
+        row += child_block.height();
     }
 
     new_block
@@ -164,42 +119,68 @@ fn render_quantifier(tok: &Token, min: usize, max: Option<usize>) -> Block {
     let min_width = label.chars().count().max(2);
     let zero = min == 0;
     let more_than_one = max.unwrap_or(2) > 1;
-    let width = block.width.max(min_width);
-    let mut new_block = Block::new(width + 2, block.height + 4);
+    let width = block.width().max(min_width);
+    let mut new_block = Block::new(width + 2, block.height() + 4);
 
     if zero {
-        for i in 2..new_block.height / 2 {
-            new_block.set(i, 0, &format!("│{}│", " ".repeat(width)));
+        for i in 2..new_block.height() / 2 {
+            new_block.set(i, 0, format!("│{}│", " ".repeat(width)).as_str());
         }
 
-        new_block.set(1, 0, &format!("╭{}╮", "─".repeat(width)));
-        new_block.set(new_block.height / 2, 0, &format!("┴{}┴", "─".repeat(width)));
+        new_block.set(1, 0, format!("╭{}╮", "─".repeat(width)).as_str());
+        new_block.set(
+            new_block.height() / 2,
+            0,
+            format!("┴{}┴", "─".repeat(width)).as_str(),
+        );
     } else {
-        new_block.set(new_block.height / 2, 0, &format!("─{}─", "─".repeat(width)));
+        new_block.set(
+            new_block.height() / 2,
+            0,
+            format!("─{}─", "─".repeat(width)).as_str(),
+        );
     }
 
     if more_than_one {
-        new_block.set(block.height + 2, 1, &format!("╰{}╯", "─".repeat(width - 2)));
-        new_block.set(block.height + 3, 1, &label);
+        new_block.set(
+            block.height() + 2,
+            1,
+            format!("╰{}╯", "─".repeat(width - 2)).as_str(),
+        );
+        new_block.set(block.height() + 3, 1, label.as_str());
     }
 
     new_block.set(2, 1, &block);
     new_block
 }
 
+fn render_special(s: &str) -> Block {
+    let mut b = Block::from(s);
+
+    b.with_styles(|styles| {
+        styles.clear(Style {
+            foreground: Color::Blue,
+            format: Format::Bold,
+            ..Default::default()
+        })
+    });
+
+    b
+}
+
 pub fn render_token(tok: &Token) -> Block {
     match tok {
         Token::Literal(ch) => Block::from(format!("{ch}").as_str()),
-        Token::Start => Block::from("^"),
-        Token::End => Block::from("$"),
-        Token::Alphanumeric => Block::from("\\w"),
-        Token::NotAlphanumeric => Block::from("\\W"),
-        Token::Digit => Block::from("\\d"),
-        Token::NotDigit => Block::from("\\D"),
-        Token::Whitespace => Block::from("\\s"),
-        Token::NotWhitespace => Block::from("\\S"),
-        Token::WordBoundary => Block::from("\\b"),
-        Token::Any => Block::from("."),
+        Token::Start => render_special("^"),
+        Token::End => render_special("$"),
+        Token::Alphanumeric => render_special("\\w"),
+        Token::NotAlphanumeric => render_special("\\W"),
+        Token::Digit => render_special("\\d"),
+        Token::NotDigit => render_special("\\D"),
+        Token::Whitespace => render_special("\\s"),
+        Token::NotWhitespace => render_special("\\S"),
+        Token::WordBoundary => render_special("\\b"),
+        Token::Any => render_special("."),
         Token::Conjunction(tokens) => render_conjunction(tokens),
         Token::Disjunction(tokens) => render_disjunction(tokens),
         Token::LazyQuantifier(tok, min, max) => render_quantifier(tok, *min, *max),
@@ -217,8 +198,8 @@ mod tests {
     fn test_block_size() {
         let b1: Block = "My\nfirst\nblock".into();
 
-        assert_eq!(b1.width, 5);
-        assert_eq!(b1.height, 3);
+        assert_eq!(b1.width(), 5);
+        assert_eq!(b1.height(), 3);
     }
 
     #[test]
@@ -246,9 +227,9 @@ mod tests {
     fn test_literal() {
         let b = render_token(&Token::Literal('a'));
 
-        assert_eq!(b.width, 1);
-        assert_eq!(b.height, 1);
-        assert_eq!(&b.s, "a\n");
+        assert_eq!(b.width(), 1);
+        assert_eq!(b.height(), 1);
+        assert_eq!(b.as_str(), "a\n");
     }
 
     #[test]
@@ -261,9 +242,9 @@ mod tests {
             Token::Literal('o'),
         ]));
 
-        assert_eq!(b.width, 5);
-        assert_eq!(b.height, 1);
-        assert_eq!(&b.s, "hello\n");
+        assert_eq!(b.width(), 5);
+        assert_eq!(b.height(), 1);
+        assert_eq!(b.as_str(), "hello\n");
     }
 
     #[test]
@@ -281,7 +262,7 @@ mod tests {
         ]));
 
         assert_eq!(
-            &b.s,
+            b.as_str(),
             &vec![
                 "╭hello╮", //
                 "┼a────┼",
@@ -306,7 +287,7 @@ mod tests {
         ]));
 
         assert_eq!(
-            &b.s,
+            b.as_str(),
             &vec![
                 "╭hello╮", //
                 "┴a────┴",
@@ -332,7 +313,7 @@ mod tests {
         ));
 
         assert_eq!(
-            &b.s,
+            b.as_str(),
             &vec![
                 "       ",
                 "╭─────╮", //
@@ -360,7 +341,7 @@ mod tests {
         ));
 
         assert_eq!(
-            &b.s,
+            b.as_str(),
             &vec![
                 "       ",
                 "╭─────╮", //
@@ -388,7 +369,7 @@ mod tests {
         ));
 
         assert_eq!(
-            &b.s,
+            b.as_str(),
             &vec![
                 "       ", //
                 "       ",
@@ -416,7 +397,7 @@ mod tests {
         ));
 
         assert_eq!(
-            &b.s,
+            b.as_str(),
             &vec![
                 "       ",
                 "╭─────╮", //

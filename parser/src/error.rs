@@ -1,4 +1,5 @@
 #[derive(thiserror::Error, Debug)]
+#[non_exhaustive]
 pub enum Error {
     #[error("Unexpected end of input")]
     UnexpectedEndOfInput,
