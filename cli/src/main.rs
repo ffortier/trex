@@ -1,7 +1,8 @@
 use std::fmt::{Arguments, Display};
 
 use clap::{Parser, Subcommand};
-use trex_parser::{error::Result, Color, Format, Regex, Style};
+
+use trex_parser::{Color, error::Result, Format, Regex, Style};
 
 const _TOML: &'static str = include_str!("../Cargo.toml");
 
@@ -53,7 +54,6 @@ fn to_termion_color(color: &Color) -> Box<dyn termion::color::Color> {
         Color::LightMagenta => Box::new(termion::color::LightMagenta),
         Color::LightCyan => Box::new(termion::color::LightCyan),
         Color::LightWhite => Box::new(termion::color::LightWhite),
-        _ => panic!("unexpected value"),
     }
 }
 
@@ -65,18 +65,75 @@ fn to_termion_style(format: &Format) -> Box<dyn Display> {
         Format::Underline => Box::new(termion::style::Framed),
         Format::Reverse => Box::new(termion::style::Invert),
         Format::Italic => Box::new(termion::style::Italic),
-        _ => panic!("unexpected value"),
     }
 }
 
 fn termion_style(style: &Style, arg: &Arguments<'_>) -> String {
-    format!(
-        "{}{}{}{}",
-        termion::color::Bg(to_termion_color(&style.background).as_ref()),
-        termion::color::Fg(to_termion_color(&style.foreground).as_ref()),
-        to_termion_style(&style.format),
-        arg
-    )
+    match style {
+        Style { format: Format::Reset, foreground: Color::Reset, background: Color::Reset } => {
+            format!("{}{}", termion::style::Reset, arg)
+        }
+        Style { format, foreground: Color::Reset, background: Color::Reset } => {
+            format!(
+                "{}{}{}",
+                termion::style::Reset,
+                to_termion_style(format),
+                arg,
+            )
+        }
+        Style { format: Format::Reset, foreground, background: Color::Reset } => {
+            format!(
+                "{}{}{}",
+                termion::style::Reset,
+                termion::color::Fg(to_termion_color(foreground).as_ref()),
+                arg,
+            )
+        }
+        Style { format: Format::Reset, foreground: Color::Reset, background } => {
+            format!(
+                "{}{}{}",
+                termion::style::Reset,
+                termion::color::Bg(to_termion_color(background).as_ref()),
+                arg,
+            )
+        }
+        Style { format: Format::Reset, foreground, background } => {
+            format!(
+                "{}{}{}{}",
+                termion::style::Reset,
+                termion::color::Fg(to_termion_color(foreground).as_ref()),
+                termion::color::Bg(to_termion_color(background).as_ref()),
+                arg,
+            )
+        }
+        Style { format, foreground: Color::Reset, background } => {
+            format!(
+                "{}{}{}{}",
+                termion::style::Reset,
+                to_termion_style(format),
+                termion::color::Bg(to_termion_color(background).as_ref()),
+                arg,
+            )
+        }
+        Style { format, foreground, background: Color::Reset } => {
+            format!(
+                "{}{}{}{}",
+                termion::style::Reset,
+                to_termion_style(format),
+                termion::color::Fg(to_termion_color(foreground).as_ref()),
+                arg,
+            )
+        }
+        Style { format, foreground, background } => {
+            format!(
+                "{}{}{}{}",
+                to_termion_style(format),
+                termion::color::Fg(to_termion_color(foreground).as_ref()),
+                termion::color::Bg(to_termion_color(background).as_ref()),
+                arg,
+            )
+        }
+    }
 }
 
 fn main() -> Result<()> {

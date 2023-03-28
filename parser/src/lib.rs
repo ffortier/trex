@@ -6,6 +6,8 @@ use std::{
 use parser::Token;
 pub use rendering::style::{Color, Format};
 
+use crate::rendering::Styled;
+
 mod compiler;
 pub mod error;
 mod parser;
@@ -33,33 +35,41 @@ impl From<rendering::style::Style> for Style {
 }
 
 struct StyledOutput<'a, F>
-where
-    F: Fn(&Style, &Arguments<'_>) -> String + 'a,
+    where
+        F: Fn(&Style, &Arguments<'_>) -> String + 'a,
 {
     tok: &'a Token,
     style_func: F,
 }
 
 impl<'a, F> Display for StyledOutput<'a, F>
-where
-    F: Fn(&Style, &Arguments<'_>) -> String + 'a,
+    where
+        F: Fn(&Style, &Arguments<'_>) -> String + 'a,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "{}",
-            (self.style_func)(
-                &Style::default(),
-                &format_args!("{}", rendering::render_token(&self.tok))
-            )
-        )
+        let block = rendering::render_token(&self.tok);
+        let mut dummy = Color::background_iter();
+
+        for ln in block.as_str().lines() {
+            write!(f, "{}", (self.style_func)(
+                &Style {
+                    background: dummy.next_color(),
+                    foreground: dummy.next_color(),
+                    ..Default::default()
+                },
+                &format_args!("{ln}"),
+            ))?;
+            writeln!(f, "{}", (self.style_func)(&Style::default(), &format_args!("")))?;
+        }
+
+        Ok(())
     }
 }
 
 impl Regex {
     pub fn with_style<'a, F>(&'a self, style_func: F) -> Box<dyn Display + 'a>
-    where
-        F: Fn(&Style, &Arguments<'_>) -> String + 'a,
+        where
+            F: Fn(&Style, &Arguments<'_>) -> String + 'a,
     {
         Box::new(StyledOutput {
             tok: &self.tok,

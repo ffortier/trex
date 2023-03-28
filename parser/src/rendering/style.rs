@@ -34,6 +34,12 @@ impl ColorIterator {
     }
 }
 
+impl ColorIterator {
+    pub fn next_color(&mut self) -> Color {
+        self.next().unwrap()
+    }
+}
+
 impl Iterator for ColorIterator {
     type Item = Color;
 
