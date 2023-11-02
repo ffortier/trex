@@ -1,0 +1,15 @@
+load("@crate_index_trex//:defs.bzl", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_binary(
+    name = "cli",
+    srcs = ["src/main.rs"],
+    data = [
+        "Cargo.toml",
+    ],
+    deps = [
+        "//trex/parser",
+    ] + all_crate_deps(),
+)
