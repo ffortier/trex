@@ -1,5 +1,5 @@
 {
-  "checksum": "107f8d06da0ee26e89d70c74ada81f8fad0c1a2599238d5a640071f695cb8803",
+  "checksum": "464e6eb2c95c7004d006764c5a552d0195ee237d1f6cf7871f066fcaee5834ca",
   "crates": {
     "anstream 0.6.4": {
       "name": "anstream",
@@ -240,36 +240,6 @@
         "version": "3.0.1"
       },
       "license": "MIT OR Apache-2.0"
-    },
-    "assert_matches 1.5.0": {
-      "name": "assert_matches",
-      "version": "1.5.0",
-      "repository": {
-        "Http": {
-          "url": "https://crates.io/api/v1/crates/assert_matches/1.5.0/download",
-          "sha256": "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "assert_matches",
-            "crate_root": "src/lib.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
-          }
-        }
-      ],
-      "library_target_name": "assert_matches",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "edition": "2015",
-        "version": "1.5.0"
-      },
-      "license": "MIT/Apache-2.0"
     },
     "bitflags 1.3.2": {
       "name": "bitflags",
@@ -1169,15 +1139,6 @@
             {
               "id": "thiserror 1.0.50",
               "target": "thiserror"
-            }
-          ],
-          "selects": {}
-        },
-        "deps_dev": {
-          "common": [
-            {
-              "id": "assert_matches 1.5.0",
-              "target": "assert_matches"
             }
           ],
           "selects": {}
