@@ -304,27 +304,24 @@ mod tests {
 
         let expected_disjunction = vec![Token::Literal('a'), Token::Literal('d')];
 
-        assert!(matches!(tok, Token::Conjunction(conjunction) if {
-            assert!(matches!(conjunction.get(0), Some(Token::Disjunction(disjunction)) if {
-                assert!(contains_exactly_in_any_order(disjunction, &expected_disjunction), "{disjunction:?} contains exactly in any order {expected_disjunction:?}");
-                true
-            }));
-            true
-        } ));
+        assert!(matches!(tok, Token::Conjunction(conjunction)
+            if matches!(conjunction.get(0), Some(Token::Disjunction(disjunction))
+                if contains_exactly_in_any_order(disjunction, &expected_disjunction)
+            )
+        ));
     }
+
     #[test]
     fn test_choice_range() {
         let tok = parse_expr("[a-d]".chars()).expect("parsing should work");
 
         let expected_disjunction = vec![Token::AsciiRange('a', 'd')];
 
-        assert!(matches!(tok, Token::Conjunction(conjunction) if {
-            assert!(matches!(conjunction.get(0), Some(Token::Disjunction(disjunction)) if {
-                assert!(contains_exactly_in_any_order(disjunction, &expected_disjunction), "{disjunction:?} contains exactly in any order {expected_disjunction:?}");
-                true
-            }));
-            true
-        }));
+        assert!(matches!(tok, Token::Conjunction(conjunction)
+            if matches!(conjunction.get(0), Some(Token::Disjunction(disjunction))
+                if contains_exactly_in_any_order(disjunction, &expected_disjunction)
+            )
+        ));
     }
 
     #[test]
@@ -333,13 +330,11 @@ mod tests {
 
         let expected_disjunction = vec![Token::AsciiRange('a', 'd'), Token::Literal('-')];
 
-        assert!(matches!(tok, Token::Conjunction(conjunction) if {
-            assert!(matches!(conjunction.get(0), Some(Token::Disjunction(disjunction)) if {
-                assert!(contains_exactly_in_any_order(disjunction, &expected_disjunction), "{disjunction:?} contains exactly in any order {expected_disjunction:?}");
-                true
-            }));
-            true
-        }));
+        assert!(matches!(tok, Token::Conjunction(conjunction)
+            if matches!(conjunction.get(0), Some(Token::Disjunction(disjunction))
+                if contains_exactly_in_any_order(disjunction, &expected_disjunction)
+            )
+        ));
     }
 
     #[test]
@@ -352,13 +347,11 @@ mod tests {
             Token::Literal('-'),
         ];
 
-        assert!(matches!(tok, Token::Conjunction(conjunction) if {
-            assert!(matches!(conjunction.get(0), Some(Token::Disjunction(disjunction)) if {
-                assert!(contains_exactly_in_any_order(disjunction, &expected_disjunction), "{disjunction:?} contains exactly in any order {expected_disjunction:?}");
-                true
-            }));
-            true
-        }));
+        assert!(matches!(tok, Token::Conjunction(conjunction)
+            if matches!(conjunction.get(0), Some(Token::Disjunction(disjunction))
+                if contains_exactly_in_any_order(disjunction, &expected_disjunction)
+            )
+        ));
     }
 
     #[test]
@@ -371,13 +364,11 @@ mod tests {
             Token::Literal('-'),
         ];
 
-        assert!(matches!(tok, Token::Conjunction(conjunction) if {
-            assert!(matches!(conjunction.get(0), Some(Token::Disjunction(disjunction)) if {
-                assert!(contains_exactly_in_any_order(disjunction, &expected_disjunction), "{disjunction:?} contains exactly in any order {expected_disjunction:?}");
-                true
-            }));
-            true
-        }));
+        assert!(matches!(tok, Token::Conjunction(conjunction)
+            if matches!(conjunction.get(0), Some(Token::Disjunction(disjunction))
+                if contains_exactly_in_any_order(disjunction, &expected_disjunction)
+            )
+        ));
     }
 
     #[test]
@@ -386,13 +377,11 @@ mod tests {
 
         let expected_disjunction = vec![Token::Literal(']'), Token::Literal('\\')];
 
-        assert!(matches!(tok, Token::Conjunction(conjunction) if {
-            assert!(matches!(conjunction.get(0), Some(Token::Disjunction(disjunction)) if {
-                assert!(contains_exactly_in_any_order(disjunction, &expected_disjunction), "{disjunction:?} contains exactly in any order {expected_disjunction:?}");
-                true
-            }));
-            true
-        }));
+        assert!(matches!(tok, Token::Conjunction(conjunction)
+            if matches!(conjunction.get(0), Some(Token::Disjunction(disjunction))
+                if contains_exactly_in_any_order(disjunction, &expected_disjunction)
+            )
+        ));
     }
 
     #[test]
